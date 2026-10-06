@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#075A36">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="assets/tmo-app-icon.jpg">
+<title>TMO Tracking Web</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&family=MuseoModerno:wght@600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script src="tmo-store.js"></script>
+<style>body{margin:0;background:#F4F6F3;font-family:Urbanist,sans-serif;color:#17251B;-webkit-font-smoothing:antialiased}a{color:#075A36;font-weight:600;text-decoration:none}a:hover{color:#3DBE72}*{box-sizing:border-box}input,button{font-family:Urbanist}input::placeholder{color:#8A968D}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column">
+  <header style="background:#075A36;color:#fff;padding:20px 24px 40px">
+    <div style="max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><img src="assets/logo-full.png" alt="TMO Logistics" style="height:40px">
+        <div style="display:flex;gap:14px;align-items:center"><sc-if value="{{ showLinks }}" hint-placeholder-val="{{ true }}"><a href="TMO Test Console.dc.html" style="color:#C6E9D3;font-size:14px">Test Console</a></sc-if>
+          <sc-if value="{{ signedOut }}" hint-placeholder-val="{{ true }}"><button onClick="{{ openSignin }}" style="height:40px;padding:0 16px;border:1.5px solid #fff;border-radius:12px;background:transparent;color:#fff;font-weight:800;font-size:14px;cursor:pointer">Sign in</button></sc-if>
+          <sc-if value="{{ signedIn }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;color:#C6E9D3;font-weight:600">{{ who }}</span><button onClick="{{ signOut }}" style="height:40px;padding:0 14px;border:0;border-radius:12px;background:#0B6A41;color:#fff;font-weight:800;font-size:14px;cursor:pointer">Sign out</button></sc-if></div></div>
+      <div style="display:flex;flex-direction:column;gap:14px;max-width:640px">
+        <h1 style="margin:0;font-size:clamp(30px,5vw,44px);font-weight:800;letter-spacing:-.02em;line-height:1.1">Track your package</h1>
+        <div style="background:#fff;border-radius:16px;height:60px;display:flex;align-items:center;gap:10px;padding:0 8px 0 18px">
+          <input value="{{ input }}" onInput="{{ onInput }}" placeholder="Waybill number, e.g. TMO-LG-48301" style="flex:1;min-width:0;border:0;outline:none;font-size:17px;font-weight:600;font-family:'IBM Plex Mono';color:#17251B;background:transparent">
+          <button onClick="{{ track }}" style="height:44px;padding:0 20px;border:0;border-radius:12px;background:#F9D44B;color:#17251B;font-weight:800;font-size:15px;cursor:pointer">Track</button>
+        </div>
+        <sc-if value="{{ hasRecent }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;flex-wrap:wrap;font-size:13px;color:#C6E9D3;align-items:center">Recent:<sc-for list="{{ recent }}" as="x" hint-placeholder-count="3"><button onClick="{{ x.go }}" style="border:1px solid #3DBE72;background:transparent;color:#fff;border-radius:999px;padding:5px 10px;font-family:'IBM Plex Mono';font-size:12px;cursor:pointer">{{ x.code }}</button></sc-for></div></sc-if>
+      </div>
+    </div>
+  </header>
+
+  <main style="flex:1;max-width:1040px;width:100%;margin:-16px auto 0;padding:0 24px 64px;display:flex;flex-direction:column;gap:16px">
+    <sc-if value="{{ signedIn }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 2px 8px rgba(23,37,27,.06)">
+        <b style="font-size:18px">My shipments</b>
+        <sc-if value="{{ noMine }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;color:#5C6B60">No shipments sent to or from this number yet.</span></sc-if>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px"><sc-for list="{{ mine }}" as="m" hint-placeholder-count="2"><button onClick="{{ m.go }}" style="text-align:left;cursor:pointer;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px;border:2px solid {{ m.bd }};background:#fff"><div style="display:flex;justify-content:space-between;width:100%;align-items:center"><span style="font-family:'IBM Plex Mono';font-size:12px;font-weight:600;color:#5C6B60">{{ m.code }}</span><span style="font-size:11px;font-weight:800;padding:4px 8px;border-radius:999px;background:{{ m.bg }};color:{{ m.fg }}">{{ m.status }}</span></div><span style="font-weight:800;font-size:15px;color:#17251B">{{ m.dir }} · {{ m.to }}</span></button></sc-for></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><div style="background:#fff;border-radius:22px;padding:28px;font-size:16px;line-height:1.5;box-shadow:0 2px 8px rgba(23,37,27,.06)"><b>{{ emptyT }}</b> <span style="color:#5C6B60">{{ emptyS }}</span></div></sc-if>
+
+    <sc-if value="{{ found }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="background:#fff;border-radius:22px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 2px 8px rgba(23,37,27,.06)">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-family:'IBM Plex Mono';font-size:14px;font-weight:600;color:#5C6B60">{{ s.code }}</span><span style="padding:6px 12px;border-radius:999px;font-size:13px;font-weight:800;background:{{ s.bg }};color:{{ s.fg }}">{{ s.status }}</span></div>
+            <span style="font-size:24px;font-weight:800;line-height:1.25">{{ s.headline }}</span>
+            <div style="display:grid;grid-template-columns:12px 1fr;gap:4px 12px;align-items:center"><span style="width:10px;height:10px;border-radius:50%;background:#3DBE72"></span><span style="font-weight:700">{{ s.from }}</span><span style="width:2px;height:18px;background:#E2E7E1;margin-left:4px"></span><span></span><span style="width:10px;height:10px;border-radius:2px;background:#075A36"></span><span style="font-weight:700">{{ s.to }}</span></div>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;border-top:1px solid #E2E7E1;padding-top:16px;font-size:14px">
+              <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;font-weight:700;color:#5C6B60">WEIGHT</span><b>{{ s.kg }}</b></div>
+              <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;font-weight:700;color:#5C6B60">SENDER</span><b>{{ s.sender }}</b></div>
+              <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;font-weight:700;color:#5C6B60">DRIVER</span><b>{{ s.driver }}</b></div>
+            </div>
+          </div>
+          <div style="background:#fff;border-radius:22px;padding:22px;display:flex;flex-direction:column">
+            <span style="font-size:12px;font-weight:800;letter-spacing:.1em;color:#5C6B60;margin-bottom:8px">LIVE HISTORY</span>
+            <sc-for list="{{ history }}" as="h" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:16px 1fr auto;gap:12px;padding:10px 0;border-top:1px solid #F0F2EF"><span style="width:12px;height:12px;border-radius:50%;margin-top:4px;background:{{ h.c }}"></span><div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:800;font-size:15px">{{ h.s }}</span><span style="font-size:13px;color:#5C6B60">{{ h.n }}</span></div><span style="font-size:13px;color:#5C6B60;font-weight:600">{{ h.t }}</span></div></sc-for>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <sc-if value="{{ needVerify }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#17251B;color:#fff;border-radius:22px;padding:24px;display:flex;flex-direction:column;gap:14px">
+              <span style="font-size:12px;font-weight:800;letter-spacing:.1em;color:#3DBE72">ARE YOU THE RECEIVER?</span>
+              <span style="font-size:18px;font-weight:700;line-height:1.4">Enter the last 4 digits of the phone this package is addressed to, to unlock your delivery QR.</span>
+              <div style="display:flex;gap:8px"><input value="{{ last4 }}" onInput="{{ onLast4 }}" maxlength="4" placeholder="••••" style="flex:1;min-width:0;height:52px;border:0;border-radius:14px;padding:0 16px;font-size:22px;font-weight:700;letter-spacing:.3em;font-family:'IBM Plex Mono';outline:none"><button onClick="{{ verify }}" style="height:52px;padding:0 18px;border:0;border-radius:14px;background:#3DBE72;color:#073D24;font-weight:800;font-size:15px;cursor:pointer">Unlock</button></div>
+              <span style="font-size:13px;color:#F9D44B;font-weight:600">{{ v4err }}</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showQr }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#17251B;color:#fff;border-radius:22px;padding:24px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center">
+              <span style="font-size:12px;font-weight:800;letter-spacing:.1em;color:#3DBE72">DELIVERY QR · {{ s.recv }}</span>
+              <img src="{{ qr }}" alt="Delivery QR" style="width:220px;height:220px;background:#fff;border-radius:14px;padding:8px;image-rendering:pixelated">
+              <span style="font-family:'IBM Plex Mono';font-size:28px;font-weight:600;letter-spacing:.2em">{{ s.token }}</span>
+              <span style="font-size:15px;font-weight:600;line-height:1.45;max-width:280px">Show this to the driver at handover. They scan it to approve delivery.</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ s.podPhoto }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fff;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:12px"><span style="font-size:12px;font-weight:800;letter-spacing:.1em;color:#5C6B60">PROOF OF DELIVERY</span><img src="{{ s.podPhoto }}" alt="Handover" style="width:100%;border-radius:14px;max-height:240px;object-fit:cover"><span style="font-size:15px">QR verified · {{ s.deliveredAt }}</span></div>
+          </sc-if>
+          <sc-if value="{{ askConfirm }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fff;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:14px"><b style="font-size:17px">Got everything in good condition?</b><div style="display:flex;gap:6px"><sc-for list="{{ stars }}" as="st" hint-placeholder-count="5"><button onClick="{{ st.pick }}" style="border:0;background:none;font-size:34px;cursor:pointer;padding:0;line-height:1;color:{{ st.c }}">★</button></sc-for></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button onClick="{{ reportIssue }}" style="height:48px;border:1.5px solid #C8412F;border-radius:12px;background:#fff;color:#C8412F;font-weight:800;font-size:14px;cursor:pointer">Report a problem</button><button onClick="{{ confirmReceipt }}" style="height:48px;border:0;border-radius:12px;background:#075A36;color:#fff;font-weight:800;font-size:14px;cursor:pointer">Yes, close it</button></div></div>
+          </sc-if>
+          <sc-if value="{{ closedNote }}" hint-placeholder-val="{{ false }}"><div style="background:#075A36;color:#fff;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:6px"><b style="font-size:18px">Shipment closed</b><span style="font-size:14px;color:#C6E9D3;line-height:1.45">{{ closedNote }}</span></div></sc-if>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{ modal }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(23,37,27,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:10">
+      <div onClick="{{ stop }}" style="width:100%;max-width:400px;background:#fff;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:14px">
+        <span style="font-size:24px;font-weight:800">{{ m.title }}</span><span style="font-size:14px;color:#5C6B60;line-height:1.5">{{ m.sub }}</span>
+        <input value="{{ m.val }}" onInput="{{ m.on }}" placeholder="{{ m.ph }}" style="height:52px;border:1.5px solid #E2E7E1;border-radius:14px;padding:0 16px;font-size:17px;font-weight:700;outline:none">
+        <sc-if value="{{ m.sms }}" hint-placeholder-val="{{ false }}"><div style="background:#F4F6F3;border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.45"><b>SMS to {{ m.phone }}:</b> {{ m.sms }}</div></sc-if>
+        <button onClick="{{ m.next }}" style="height:52px;border:0;border-radius:14px;background:#075A36;color:#fff;font-weight:800;font-size:15px;cursor:pointer">{{ m.cta }}</button>
+        <span style="font-size:13px;color:#8A968D;text-align:center">Testing mode: any 6-digit code works.</span>
+      </div>
+    </div>
+  </sc-if>
+  <footer style="padding:24px;text-align:center;font-family:MuseoModerno,Urbanist;font-size:14px;color:#5C6B60">TMO Logistics</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state={ready:false,input:'',code:'',last4:'',v4err:'',stars:0,modal:null,mphone:'',motp:''};
+  componentDidMount(){const boot=()=>{const T=window.TMO;if(!T)return setTimeout(boot,40);const q=(location.search.match(/code=([^&]+)/)||[])[1]||'';this.setState({ready:true,code:q?decodeURIComponent(q).toUpperCase():'',input:q?decodeURIComponent(q).toUpperCase():''});this.unsub=T.subscribe(()=>this.forceUpdate());};boot();}
+  componentWillUnmount(){this.unsub&&this.unsub();}
+  renderVals(){
+    const T=window.TMO,s=this.state;
+    if(!T||!s.ready)return {showLinks:true,signedOut:true};
+    const db=T.db,sess=T.getSession('track'),myPh=sess?T.norm(sess):'';
+    const sh=s.code?T.ship(db,s.code):null;
+    const verified=sh&&(myPh===T.norm(sh.receiverPhone)||(JSON.parse(localStorage.getItem('tmo.track.ok')||'{}'))[sh.code]);
+    const st=sh?T.display(sh):'';const c=T.chip(st);const dr=sh&&sh.driverId?T.user(db,sh.driverId):null;
+    const heads={'Requested':'Waiting for a driver to accept','Paid':'Paid — waiting for a driver','Assigned':'Assigned to '+(dr?dr.name:'a driver'),'Awaiting payment':'Weighed — waiting for sender’s payment','Ready for pickup':'Ready for pickup','Accepted':'At '+(sh&&sh.park)+', waiting for a vehicle','Created':'Being registered','In transit':'On the way to '+(sh?T.dest(sh.dest).s:''),'Out for delivery':'Driver is arriving now','Delivered':'Delivered','Closed':'Delivered & closed','Cancelled':'Cancelled'};
+    const recent=db.shipments.slice(0,4);
+    const mine=myPh?db.shipments.filter(x=>T.norm(x.receiverPhone)===myPh||T.norm(x.senderPhone)===myPh):[];
+    const lastSms=s.modal==='otp'?db.sms.find(m=>m.to===T.norm(s.mphone)&&m.kind==='otp'):null;
+    const qrOk=sh&&verified&&!['Delivered','Closed','Cancelled'].includes(sh.status)&&!!sh.waybillAt;
+    return {
+      showLinks:!T.embed,signedIn:!!myPh,signedOut:!myPh,who:myPh?(T.userByPhone(db,myPh)||{name:T.fmtPhone(myPh)}).name:'',
+      openSignin:()=>this.setState({modal:'phone',mphone:'',motp:''}),signOut:()=>{T.setSession('track',null);this.forceUpdate();},
+      input:s.input,onInput:e=>this.setState({input:e.target.value.toUpperCase()}),track:()=>this.setState({code:s.input.trim(),last4:'',v4err:''}),
+      hasRecent:recent.length>0,recent:recent.map(x=>({code:x.code,go:()=>this.setState({code:x.code,input:x.code,last4:'',v4err:''})})),
+      mine:mine.map(x=>{const st=T.display(x),c=T.chip(st);return {code:x.code,status:st,bg:c[0],fg:c[1],dir:T.norm(x.receiverPhone)===myPh?'Incoming':'Sent',to:T.dest(x.dest).s,bd:x.code===s.code?'#075A36':'#E2E7E1',go:()=>this.setState({code:x.code,input:x.code})};}),noMine:mine.length===0,
+      empty:!sh,emptyT:s.code?'We couldn’t find that waybill.':'Enter a waybill to see live status.',emptyS:s.code?'Check the code on your SMS — it starts with TMO-LG.':'Codes are sent by SMS when a package is registered.',
+      found:!!sh,
+      s:sh?{code:sh.code,status:st,bg:c[0],fg:c[1],headline:heads[st]||st,from:sh.pickup||sh.park,to:T.dest(sh.dest).n+' · '+sh.receiverName,kg:sh.kg?sh.kg+' kg':'Not weighed',sender:sh.senderName,driver:dr?dr.name.split(' ')[0]+' · '+(dr.plate||''):'—',recv:sh.receiverName,token:sh.podToken,podPhoto:sh.podPhoto||'',deliveredAt:sh.deliveredAt?T.time(sh.deliveredAt):''}:{},
+      history:sh?sh.history.slice().reverse().map((h,i)=>({s:h.status,n:(h.by||'')+(h.note?' · '+h.note:''),t:T.time(h.at),c:i===0?'#F9D44B':'#3DBE72'})):[],
+      needVerify:!!sh&&!verified&&!['Delivered','Closed','Cancelled'].includes(sh.status),showQr:!!qrOk,qr:qrOk?T.qr(T.podPayload(sh),7):'',
+      last4:s.last4,onLast4:e=>this.setState({last4:e.target.value.replace(/\D/g,'').slice(0,4),v4err:''}),
+      verify:()=>{if(s.last4===T.norm(sh.receiverPhone).slice(-4)){const ok=JSON.parse(localStorage.getItem('tmo.track.ok')||'{}');ok[sh.code]=1;localStorage.setItem('tmo.track.ok',JSON.stringify(ok));T.update(d=>T.log(d,sh.receiverName,'receiver','unlocked delivery QR on tracking web',sh.code));}else this.setState({v4err:'That doesn’t match the receiver’s number.'});},
+      askConfirm:!!sh&&sh.status==='Delivered'&&verified,
+      stars:[1,2,3,4,5].map(n=>({c:n<=s.stars?'#F9D44B':'#E2E7E1',pick:()=>this.setState({stars:n})})),
+      confirmReceipt:()=>T.update(d=>{const x=T.ship(d,sh.code);x.receiverRating=s.stars||null;T.step(d,x,'Closed',x.receiverName,'receiver','Receiver confirmed'+(s.stars?' · '+s.stars+'★':''));T.sms(d,x.senderPhone,'TMO: '+x.receiverName+' confirmed receipt of '+x.code+'. Shipment closed.');}),
+      reportIssue:()=>T.update(d=>{const x=T.ship(d,sh.code);x.issues=(x.issues||[]).concat([{id:T.uid('i'),t:'Receiver reported a problem after delivery',at:Date.now(),by:x.receiverName,open:true}]);T.note(d,x,'Issue reported',x.receiverName,'receiver','Problem after delivery');}),
+      closedNote:sh&&sh.status==='Closed'?(sh.history[sh.history.length-1].note||'')+' · '+T.time(sh.history[sh.history.length-1].at):'',
+      modal:!!s.modal,closeModal:()=>this.setState({modal:null}),stop:e=>e.stopPropagation(),
+      m:s.modal==='otp'?{title:'Enter the code',sub:'Sent to '+T.fmtPhone(s.mphone),val:s.motp,ph:'6-digit code',on:e=>this.setState({motp:e.target.value.replace(/\D/g,'').slice(0,6)}),cta:'Verify & sign in',phone:T.fmtPhone(s.mphone),sms:lastSms?lastSms.text:'',
+          next:()=>{if(s.motp.length!==6)return;T.setSession('track',T.norm(s.mphone));T.update(d=>T.log(d,T.fmtPhone(s.mphone),'receiver','signed in to tracking web'));this.setState({modal:null});}}
+        :{title:'Sign in to TMO',sub:'See every package sent to or from your number.',val:s.mphone,ph:'Phone number',on:e=>this.setState({mphone:e.target.value}),cta:'Send code',phone:'',sms:'',next:()=>{if(T.norm(s.mphone).length!==11)return;T.sendOtp(s.mphone,'Tracking');this.setState({modal:'otp',motp:''});}}
+    };
+  }
+}
+</script>
+</body>
+</html>
