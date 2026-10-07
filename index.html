@@ -68,8 +68,8 @@
           <sc-if value="{{ needVerify }}" hint-placeholder-val="{{ false }}">
             <div style="background:#17251B;color:#fff;border-radius:22px;padding:24px;display:flex;flex-direction:column;gap:14px">
               <span style="font-size:12px;font-weight:800;letter-spacing:.1em;color:#3DBE72">ARE YOU THE RECEIVER?</span>
-              <span style="font-size:18px;font-weight:700;line-height:1.4">Enter the last 4 digits of the phone this package is addressed to, to unlock your delivery QR.</span>
-              <div style="display:flex;gap:8px"><input value="{{ last4 }}" onInput="{{ onLast4 }}" maxlength="4" placeholder="••••" style="flex:1;min-width:0;height:52px;border:0;border-radius:14px;padding:0 16px;font-size:22px;font-weight:700;letter-spacing:.3em;font-family:'IBM Plex Mono';outline:none"><button onClick="{{ verify }}" style="height:52px;padding:0 18px;border:0;border-radius:14px;background:#3DBE72;color:#073D24;font-weight:800;font-size:15px;cursor:pointer">Unlock</button></div>
+              <span style="font-size:18px;font-weight:700;line-height:1.4">Enter your verification code (123456) to unlock your delivery QR.</span>
+              <div style="display:flex;gap:8px"><input value="{{ last4 }}" onInput="{{ onLast4 }}" maxlength="6" placeholder="123456" style="flex:1;min-width:0;height:52px;border:0;border-radius:14px;padding:0 16px;font-size:22px;font-weight:700;letter-spacing:.3em;font-family:'IBM Plex Mono';outline:none"><button onClick="{{ verify }}" style="height:52px;padding:0 18px;border:0;border-radius:14px;background:#3DBE72;color:#073D24;font-weight:800;font-size:15px;cursor:pointer">Unlock</button></div>
               <span style="font-size:13px;color:#F9D44B;font-weight:600">{{ v4err }}</span>
             </div>
           </sc-if>
@@ -100,7 +100,7 @@
         <input value="{{ m.val }}" onInput="{{ m.on }}" placeholder="{{ m.ph }}" style="height:52px;border:1.5px solid #E2E7E1;border-radius:14px;padding:0 16px;font-size:17px;font-weight:700;outline:none">
         <sc-if value="{{ m.sms }}" hint-placeholder-val="{{ false }}"><div style="background:#F4F6F3;border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.45"><b>SMS to {{ m.phone }}:</b> {{ m.sms }}</div></sc-if>
         <button onClick="{{ m.next }}" style="height:52px;border:0;border-radius:14px;background:#075A36;color:#fff;font-weight:800;font-size:15px;cursor:pointer">{{ m.cta }}</button>
-        <span style="font-size:13px;color:#8A968D;text-align:center">Testing mode: any 6-digit code works.</span>
+        <span style="font-size:13px;color:#8A968D;text-align:center">Your code is 123456.</span>
       </div>
     </div>
   </sc-if>
@@ -109,7 +109,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state={ready:false,input:'',code:'',last4:'',v4err:'',stars:0,modal:null,mphone:'',motp:''};
+  state={ready:false,input:'',code:'',last4:'',v4err:'',stars:0,modal:null,mphone:'08098765432',motp:''};
   componentDidMount(){const boot=()=>{const T=window.TMO;if(!T)return setTimeout(boot,40);const q=(location.search.match(/code=([^&]+)/)||[])[1]||'';this.setState({ready:true,code:q?decodeURIComponent(q).toUpperCase():'',input:q?decodeURIComponent(q).toUpperCase():''});this.unsub=T.subscribe(()=>this.forceUpdate());};boot();}
   componentWillUnmount(){this.unsub&&this.unsub();}
   renderVals(){
@@ -125,7 +125,7 @@ class Component extends DCLogic {
     const lastSms=s.modal==='otp'?db.sms.find(m=>m.to===T.norm(s.mphone)&&m.kind==='otp'):null;
     const qrOk=sh&&verified&&!['Delivered','Closed','Cancelled'].includes(sh.status)&&!!sh.waybillAt;
     return {
-      showLinks:!T.embed,signedIn:!!myPh,signedOut:!myPh,who:myPh?(T.userByPhone(db,myPh)||{name:T.fmtPhone(myPh)}).name:'',
+      showLinks:!T.embed,signedIn:!!myPh,signedOut:!myPh,who:myPh?(T.userByPhone(db,myPh,'customer')||T.userByPhone(db,myPh)||{name:T.fmtPhone(myPh)}).name:'',
       openSignin:()=>this.setState({modal:'phone',mphone:'',motp:''}),signOut:()=>{T.setSession('track',null);this.forceUpdate();},
       input:s.input,onInput:e=>this.setState({input:e.target.value.toUpperCase()}),track:()=>this.setState({code:s.input.trim(),last4:'',v4err:''}),
       hasRecent:recent.length>0,recent:recent.map(x=>({code:x.code,go:()=>this.setState({code:x.code,input:x.code,last4:'',v4err:''})})),
@@ -135,8 +135,8 @@ class Component extends DCLogic {
       s:sh?{code:sh.code,status:st,bg:c[0],fg:c[1],headline:heads[st]||st,from:sh.pickup||sh.park,to:T.dest(sh.dest).n+' · '+sh.receiverName,kg:sh.kg?sh.kg+' kg':'Not weighed',sender:sh.senderName,driver:dr?dr.name.split(' ')[0]+' · '+(dr.plate||''):'—',recv:sh.receiverName,token:sh.podToken,podPhoto:sh.podPhoto||'',deliveredAt:sh.deliveredAt?T.time(sh.deliveredAt):''}:{},
       history:sh?sh.history.slice().reverse().map((h,i)=>({s:h.status,n:(h.by||'')+(h.note?' · '+h.note:''),t:T.time(h.at),c:i===0?'#F9D44B':'#3DBE72'})):[],
       needVerify:!!sh&&!verified&&!['Delivered','Closed','Cancelled'].includes(sh.status),showQr:!!qrOk,qr:qrOk?T.qr(T.podPayload(sh),7):'',
-      last4:s.last4,onLast4:e=>this.setState({last4:e.target.value.replace(/\D/g,'').slice(0,4),v4err:''}),
-      verify:()=>{if(s.last4===T.norm(sh.receiverPhone).slice(-4)){const ok=JSON.parse(localStorage.getItem('tmo.track.ok')||'{}');ok[sh.code]=1;localStorage.setItem('tmo.track.ok',JSON.stringify(ok));T.update(d=>T.log(d,sh.receiverName,'receiver','unlocked delivery QR on tracking web',sh.code));}else this.setState({v4err:'That doesn’t match the receiver’s number.'});},
+      last4:s.last4,onLast4:e=>this.setState({last4:e.target.value.replace(/\D/g,'').slice(0,6),v4err:''}),
+      verify:()=>{if(s.last4===T.CODE){const ok=JSON.parse(localStorage.getItem('tmo.track.ok')||'{}');ok[sh.code]=1;localStorage.setItem('tmo.track.ok',JSON.stringify(ok));T.update(d=>T.log(d,sh.receiverName,'receiver','unlocked delivery QR on tracking web',sh.code));}else this.setState({v4err:'That doesn’t match the receiver’s number.'});},
       askConfirm:!!sh&&sh.status==='Delivered'&&verified,
       stars:[1,2,3,4,5].map(n=>({c:n<=s.stars?'#F9D44B':'#E2E7E1',pick:()=>this.setState({stars:n})})),
       confirmReceipt:()=>T.update(d=>{const x=T.ship(d,sh.code);x.receiverRating=s.stars||null;T.step(d,x,'Closed',x.receiverName,'receiver','Receiver confirmed'+(s.stars?' · '+s.stars+'★':''));T.sms(d,x.senderPhone,'TMO: '+x.receiverName+' confirmed receipt of '+x.code+'. Shipment closed.');}),
@@ -144,7 +144,7 @@ class Component extends DCLogic {
       closedNote:sh&&sh.status==='Closed'?(sh.history[sh.history.length-1].note||'')+' · '+T.time(sh.history[sh.history.length-1].at):'',
       modal:!!s.modal,closeModal:()=>this.setState({modal:null}),stop:e=>e.stopPropagation(),
       m:s.modal==='otp'?{title:'Enter the code',sub:'Sent to '+T.fmtPhone(s.mphone),val:s.motp,ph:'6-digit code',on:e=>this.setState({motp:e.target.value.replace(/\D/g,'').slice(0,6)}),cta:'Verify & sign in',phone:T.fmtPhone(s.mphone),sms:lastSms?lastSms.text:'',
-          next:()=>{if(s.motp.length!==6)return;T.setSession('track',T.norm(s.mphone));T.update(d=>T.log(d,T.fmtPhone(s.mphone),'receiver','signed in to tracking web'));this.setState({modal:null});}}
+          next:()=>{if(s.motp!==T.CODE)return this.setState({motp:''});T.setSession('track',T.norm(s.mphone));T.update(d=>T.log(d,T.fmtPhone(s.mphone),'receiver','signed in to tracking web'));this.setState({modal:null});}}
         :{title:'Sign in to TMO',sub:'See every package sent to or from your number.',val:s.mphone,ph:'Phone number',on:e=>this.setState({mphone:e.target.value}),cta:'Send code',phone:'',sms:'',next:()=>{if(T.norm(s.mphone).length!==11)return;T.sendOtp(s.mphone,'Tracking');this.setState({modal:'otp',motp:''});}}
     };
   }
