@@ -78,7 +78,7 @@
               <span style="font-size:12px;font-weight:800;letter-spacing:.1em;color:#3DBE72">DELIVERY QR · {{ s.recv }}</span>
               <img src="{{ qr }}" alt="Delivery QR" style="width:220px;height:220px;background:#fff;border-radius:14px;padding:8px;image-rendering:pixelated">
               <span style="font-family:'IBM Plex Mono';font-size:28px;font-weight:600;letter-spacing:.2em">{{ s.token }}</span>
-              <span style="font-size:15px;font-weight:600;line-height:1.45;max-width:280px">Show this to the driver at handover. They scan it to approve delivery.</span>
+              <span style="font-size:15px;font-weight:600;line-height:1.45;max-width:280px">Show this to the driver at handover. Can’t scan? Read them the 4-digit code above.</span>
             </div>
           </sc-if>
           <sc-if value="{{ s.podPhoto }}" hint-placeholder-val="{{ false }}">
@@ -119,7 +119,7 @@ class Component extends DCLogic {
     const sh=s.code?T.ship(db,s.code):null;
     const verified=sh&&(myPh===T.norm(sh.receiverPhone)||(JSON.parse(localStorage.getItem('tmo.track.ok')||'{}'))[sh.code]);
     const st=sh?T.display(sh):'';const c=T.chip(st);const dr=sh&&sh.driverId?T.user(db,sh.driverId):null;
-    const heads={'Requested':'Waiting for a driver to accept','Paid':'Paid — waiting for a driver','Assigned':'Assigned to '+(dr?dr.name:'a driver'),'Awaiting payment':'Weighed — waiting for sender’s payment','Ready for pickup':'Ready for pickup','Accepted':'At '+(sh&&sh.park)+', waiting for a vehicle','Created':'Being registered','In transit':'On the way to '+(sh?T.dest(sh.dest).s:''),'Out for delivery':'Driver is arriving now','Delivered':'Delivered','Closed':'Delivered & closed','Cancelled':'Cancelled'};
+    const heads={'Requested':'Request received — officer assigning a driver','Paid':'Paid — officer assigning a driver','Awaiting driver':'Assigned to '+(dr?dr.name:'a driver')+' — awaiting acceptance','Driver accepted':(dr?dr.name.split(' ')[0]:'Driver')+' accepted the job','Assigned':'Assigned to '+(dr?dr.name:'a driver'),'Awaiting payment':'Weighed — waiting for sender’s payment','Ready for pickup':'Ready for pickup','Accepted':'At '+(sh&&sh.park)+', waiting for a vehicle','Created':'Being registered','In transit':'On the way to '+(sh?T.dest(sh.dest).s:''),'Out for delivery':'Driver is arriving now','Delivered':'Delivered','Closed':'Delivered & closed','Cancelled':'Cancelled'};
     const recent=db.shipments.slice(0,4);
     const mine=myPh?db.shipments.filter(x=>T.norm(x.receiverPhone)===myPh||T.norm(x.senderPhone)===myPh):[];
     const lastSms=s.modal==='otp'?db.sms.find(m=>m.to===T.norm(s.mphone)&&m.kind==='otp'):null;
@@ -132,7 +132,7 @@ class Component extends DCLogic {
       mine:mine.map(x=>{const st=T.display(x),c=T.chip(st);return {code:x.code,status:st,bg:c[0],fg:c[1],dir:T.norm(x.receiverPhone)===myPh?'Incoming':'Sent',to:T.dest(x.dest).s,bd:x.code===s.code?'#075A36':'#E2E7E1',go:()=>this.setState({code:x.code,input:x.code})};}),noMine:mine.length===0,
       empty:!sh,emptyT:s.code?'We couldn’t find that waybill.':'Enter a waybill to see live status.',emptyS:s.code?'Check the code on your SMS — it starts with TMO-LG.':'Codes are sent by SMS when a package is registered.',
       found:!!sh,
-      s:sh?{code:sh.code,status:st,bg:c[0],fg:c[1],headline:heads[st]||st,from:sh.pickup||sh.park,to:T.dest(sh.dest).n+' · '+sh.receiverName,kg:sh.kg?sh.kg+' kg':'Not weighed',sender:sh.senderName,driver:dr?dr.name.split(' ')[0]+' · '+(dr.plate||''):'—',recv:sh.receiverName,token:sh.podToken,podPhoto:sh.podPhoto||'',deliveredAt:sh.deliveredAt?T.time(sh.deliveredAt):''}:{},
+      s:sh?{code:sh.code,status:st,bg:c[0],fg:c[1],headline:heads[st]||st,from:sh.pickup||sh.park,to:T.dest(sh.dest).n+' · '+sh.receiverName,kg:sh.kg?sh.kg+' kg':'Not weighed',sender:sh.senderName,driver:dr?dr.name.split(' ')[0]+' · '+(dr.plate||''):'—',recv:sh.receiverName,token:sh.pin4||sh.podToken,podPhoto:sh.podPhoto||'',deliveredAt:sh.deliveredAt?T.time(sh.deliveredAt):''}:{},
       history:sh?sh.history.slice().reverse().map((h,i)=>({s:h.status,n:(h.by||'')+(h.note?' · '+h.note:''),t:T.time(h.at),c:i===0?'#F9D44B':'#3DBE72'})):[],
       needVerify:!!sh&&!verified&&!['Delivered','Closed','Cancelled'].includes(sh.status),showQr:!!qrOk,qr:qrOk?T.qr(T.podPayload(sh),7):'',
       last4:s.last4,onLast4:e=>this.setState({last4:e.target.value.replace(/\D/g,'').slice(0,6),v4err:''}),
