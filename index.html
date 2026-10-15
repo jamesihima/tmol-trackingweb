@@ -78,7 +78,7 @@
               <span style="font-size:12px;font-weight:800;letter-spacing:.1em;color:#3DBE72">DELIVERY QR · {{ s.recv }}</span>
               <img src="{{ qr }}" alt="Delivery QR" style="width:220px;height:220px;background:#fff;border-radius:14px;padding:8px;image-rendering:pixelated">
               <span style="font-family:'IBM Plex Mono';font-size:28px;font-weight:600;letter-spacing:.2em">{{ s.token }}</span>
-              <span style="font-size:15px;font-weight:600;line-height:1.45;max-width:280px">Show this to the driver at handover. Can’t scan? Read them the 4-digit code above.</span>
+              <span style="font-size:15px;font-weight:600;line-height:1.45;max-width:280px">QR is optional — the driver can scan it, or you can give them the 4-digit code above.</span>
             </div>
           </sc-if>
           <sc-if value="{{ s.podPhoto }}" hint-placeholder-val="{{ false }}">
@@ -123,7 +123,7 @@ class Component extends DCLogic {
     const recent=db.shipments.slice(0,4);
     const mine=myPh?db.shipments.filter(x=>T.norm(x.receiverPhone)===myPh||T.norm(x.senderPhone)===myPh):[];
     const lastSms=s.modal==='otp'?db.sms.find(m=>m.to===T.norm(s.mphone)&&m.kind==='otp'):null;
-    const qrOk=sh&&verified&&!['Delivered','Closed','Cancelled'].includes(sh.status)&&!!sh.waybillAt;
+    const qrOk=sh&&verified&&!['Delivered','Closed','Cancelled'].includes(sh.status)&&sh.channel!=='ride';
     return {
       showLinks:!T.embed,signedIn:!!myPh,signedOut:!myPh,who:myPh?(T.userByPhone(db,myPh,'customer')||T.userByPhone(db,myPh)||{name:T.fmtPhone(myPh)}).name:'',
       openSignin:()=>this.setState({modal:'phone',mphone:'',motp:''}),signOut:()=>{T.setSession('track',null);this.forceUpdate();},

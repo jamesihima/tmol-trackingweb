@@ -112,6 +112,7 @@
       var sh = Object.assign({ id: uid('s'), code: T.newCode(d), podToken: CODE, pin4: T.pin4(), status: 'Created', payments: [], paidAmount: 0, history: [], issues: [], createdAt: now() }, o);
       sh.history.push({ status: 'Created', at: now(), by: actor, note: o.channel === 'online' ? 'Online pickup request' : (o.channel === 'ride' ? 'Passenger package registered' : 'Drop-off registered') });
       d.shipments = d.shipments.filter(function (x) { return x.code !== sh.code; }); d.shipments.unshift(sh);
+      if (sh.receiverPhone && sh.channel !== 'ride') T.sms(d, sh.receiverPhone, 'TMO: Your delivery code for ' + sh.code + ' is ' + sh.pin4 + '. Show the QR at tmo.ng/t/' + sh.code + ' or give the driver this code at handover.');
       T.log(d, actor, role, (o.channel === 'online' ? 'requested a pickup ' : 'registered a shipment ') + sh.code + ' → ' + T.dest(o.dest).s, sh.code);
       return sh;
     },
