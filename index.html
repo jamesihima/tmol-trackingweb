@@ -75,10 +75,10 @@
           </sc-if>
           <sc-if value="{{ showQr }}" hint-placeholder-val="{{ false }}">
             <div style="background:#17251B;color:#fff;border-radius:22px;padding:24px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center">
-              <span style="font-size:12px;font-weight:800;letter-spacing:.1em;color:#3DBE72">DELIVERY QR · {{ s.recv }}</span>
-              <img src="{{ qr }}" alt="Delivery QR" style="width:220px;height:220px;background:#fff;border-radius:14px;padding:8px;image-rendering:pixelated">
-              <span style="font-family:'IBM Plex Mono';font-size:28px;font-weight:600;letter-spacing:.2em">{{ s.token }}</span>
-              <span style="font-size:15px;font-weight:600;line-height:1.45;max-width:280px">QR is optional — the driver can scan it, or you can give them the 4-digit code above.</span>
+              <span style="font-size:12px;font-weight:800;letter-spacing:.1em;color:#3DBE72">DELIVERY CODE · {{ s.recv }}</span>
+              
+              <span style="font-family:'IBM Plex Mono';font-size:44px;font-weight:600;letter-spacing:.3em">{{ s.token }}</span>
+              <span style="font-size:15px;font-weight:600;line-height:1.45;max-width:280px">Give this code to the driver at handover to confirm delivery.</span>
             </div>
           </sc-if>
           <sc-if value="{{ s.podPhoto }}" hint-placeholder-val="{{ false }}">
@@ -134,7 +134,7 @@ class Component extends DCLogic {
       found:!!sh,
       s:sh?{code:sh.code,status:st,bg:c[0],fg:c[1],headline:heads[st]||st,from:sh.pickup||sh.park,to:T.dest(sh.dest).n+' · '+sh.receiverName,kg:sh.kg?sh.kg+' kg':'Not weighed',sender:sh.senderName,driver:dr?dr.name.split(' ')[0]+' · '+(dr.plate||''):'—',recv:sh.receiverName,token:sh.pin4||sh.podToken,podPhoto:sh.podPhoto||'',deliveredAt:sh.deliveredAt?T.time(sh.deliveredAt):''}:{},
       history:sh?sh.history.slice().reverse().map((h,i)=>({s:h.status,n:(h.by||'')+(h.note?' · '+h.note:''),t:T.time(h.at),c:i===0?'#F9D44B':'#3DBE72'})):[],
-      needVerify:!!sh&&!verified&&!['Delivered','Closed','Cancelled'].includes(sh.status),showQr:!!qrOk,qr:qrOk?T.qr(T.podPayload(sh),7):'',
+      needVerify:!!sh&&!verified&&!['Delivered','Closed','Cancelled'].includes(sh.status),showQr:!!qrOk,
       last4:s.last4,onLast4:e=>this.setState({last4:e.target.value.replace(/\D/g,'').slice(0,6),v4err:''}),
       verify:()=>{if(s.last4===T.CODE){const ok=JSON.parse(localStorage.getItem('tmo.track.ok')||'{}');ok[sh.code]=1;localStorage.setItem('tmo.track.ok',JSON.stringify(ok));T.update(d=>T.log(d,sh.receiverName,'receiver','unlocked delivery QR on tracking web',sh.code));}else this.setState({v4err:'That doesn’t match the receiver’s number.'});},
       askConfirm:!!sh&&sh.status==='Delivered'&&verified,
